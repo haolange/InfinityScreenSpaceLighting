@@ -1,0 +1,22 @@
+{
+    "name": "Infinity.Render.Runtime",
+    "references": [
+        "Unity.Mathematics",
+        "Unity.Postprocessing.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.infinity.render",
+            "expression": "0.0.0",
+            "define": "InfinityRenderRuntime"
+        }
+    ],
+    "noEngineReferences": false
+}
