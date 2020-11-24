@@ -175,7 +175,7 @@ void Raytracing_ScreenTrace (uint3 id : SV_DispatchThreadID)
 	float3 ReflectVector = -reflect(WorldNormal, normalize(WorldPos - _WorldSpaceCameraPos));
 	float ReflecOcclusion = ReflectionOcclusion(BentNormal, ReflectVector, 0.25, 0.5);
 
-	UAV_ScreenIrradiance[id.xy] = ReflecOcclusion;
+	//UAV_ScreenIrradiance[id.xy] = ReflecOcclusion;
 	//UAV_ScreenIrradiance[id.xy] = float4(BentNormal, 1);
-	//UAV_ScreenIrradiance[id.xy] = dot(BentNormal, _WorldSpaceLightPos0.xyz);*/
+	UAV_ScreenIrradiance[id.xy] = dot(BentNormal, _WorldSpaceLightPos0.xyz);*/
 }
