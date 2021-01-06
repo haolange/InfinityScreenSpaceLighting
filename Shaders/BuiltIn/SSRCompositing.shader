@@ -54,7 +54,7 @@
             float4 SpecularColor = tex2D(_CameraGBufferTexture1, UV);
             float Roughness = clamp(1 - SpecularColor.a, 0.02, 1);
 
-            float3 ScreenPos = GetScreenSpacePos(UV, SceneDepth);
+            float3 ScreenPos = GetNDCPos(UV, SceneDepth);
             float3 WorldPos = GetWorldSpacePos(ScreenPos, _Matrix_InvViewProj);
             float3 ViewDir = GetViewDir(WorldPos, _WorldSpaceCameraPos);
 

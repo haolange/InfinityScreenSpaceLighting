@@ -1,6 +1,7 @@
 #ifndef _BaseCommon_
 #define _BaseCommon_
 
+
 //#define float half
 //#define float2 half2
 //#define float3 half3
@@ -440,7 +441,7 @@ float Luma4(float3 Color)
     return (Color.g * 2) + (Color.r + Color.b);
 }
 
-float Luminance(float3 rgb)
+float CLuminance(float3 rgb)
 {
     return dot( rgb, float3(0.0396819152, 0.458021790, 0.00609653955) );
 }
@@ -455,7 +456,7 @@ float HdrWeightY(float Color, float Exposure)
     return rcp(Color * Exposure + 4);
 }
 
-float3 RGBToYCoCg(float3 RGB)
+/*float3 RGBToYCoCg(float3 RGB)
 {
     float Y = dot(RGB, float3(1, 2, 1));
     float Co = dot(RGB, float3(2, 0, -2));
@@ -475,6 +476,22 @@ float3 YCoCgToRGB(float3 YCoCg)
     float G = Y + Cg;
     float B = Y - Co - Cg;
     
+    return float3(R, G, B);
+}*/
+
+float3 RGBToYCbCr(float3 RGB) {
+    float Y = (0.299 * RGB.r) + (0.587 * RGB.g) + (0.114 * RGB.b);
+    float Cb = (RGB.b - Y) * 0.565;
+    float Cr = (RGB.r - Y) * 0.713;
+
+    return float3(Y, Cb, Cr);
+}
+
+float3 YCbCrToRGB(float3 YCbCr) {
+    float R = YCbCr.x + (1.403 * YCbCr.z);
+    float G = YCbCr.x - (0.344 * YCbCr.y) - (0.714 * YCbCr.z);
+    float B = YCbCr.x + (1.770 * YCbCr.y);
+
     return float3(R, G, B);
 }
 
@@ -533,20 +550,20 @@ float3 GetViewSpaceNormal(float3 normal, float4x4 _WToCMatrix)
     return normalize(viewNormal);
 }
 
-float3 GetScreenSpacePos(float2 uv, float depth)
+float3 GetNDCPos(float2 uv, float depth)
 {
     return float3(uv * 2 - 1, depth);
 }
 
-float3 GetWorldSpacePos(float3 ScreenPos, float4x4 Matrix_InvViewProj)
+float3 GetWorldSpacePos(float3 NDCPos, float4x4 Matrix_InvViewProj)
 {
-    float4 worldPos = mul( Matrix_InvViewProj, float4(ScreenPos, 1) );
+    float4 worldPos = mul( Matrix_InvViewProj, float4(NDCPos, 1) );
     return worldPos.xyz / worldPos.w;
 }
 
-float3 GetViewSpacePos(float3 ScreenPos, float4x4 Matrix_InvProj)
+float3 GetViewSpacePos(float3 NDCPos, float4x4 Matrix_InvProj)
 {
-    float4 viewPos = mul(Matrix_InvProj, float4(ScreenPos, 1));
+    float4 viewPos = mul(Matrix_InvProj, float4(NDCPos, 1));
     return viewPos.xyz / viewPos.w;
 }
 
@@ -555,143 +572,20 @@ float3 GetViewDir(float3 worldPos, float3 ViewPos)
     return normalize(worldPos - ViewPos);
 }
 
-float2 GetMotionVector(float SceneDepth, float2 inUV, float4x4 Matrix_InvViewProj, float4x4 _PrevViewProjectionMatrix, float4x4 _ViewProjectionMatrix)
+float2 GetMotionVector(float SceneDepth, float2 inUV, float4x4 Matrix_InvViewProj, float4x4 Matrix_LastViewProj, float4x4 Matrix_ViewProj)
 {
-    float3 ScreenPos = GetScreenSpacePos(inUV, SceneDepth);
-    float4 worldPos = float4(GetWorldSpacePos(ScreenPos, Matrix_InvViewProj), 1);
+    float3 NDCPos = GetNDCPos(inUV, SceneDepth);
+    float4 worldPos = float4(GetWorldSpacePos(NDCPos, Matrix_InvViewProj), 1);
 
-    float4 prevClipPos = mul(_PrevViewProjectionMatrix, worldPos);
-    float4 curClipPos = mul(_ViewProjectionMatrix, worldPos);
+    float4 LastClipPos = mul(Matrix_LastViewProj, worldPos);
+    float4 CurClipPos = mul(Matrix_ViewProj, worldPos);
 
-    float2 prevHPos = prevClipPos.xy / prevClipPos.w;
-    float2 curHPos = curClipPos.xy / curClipPos.w;
+    float2 LastNDC = LastClipPos.xy / LastClipPos.w;
+    float2 CurNDC = CurClipPos.xy / CurClipPos.w;
 
-    float2 vPosPrev = (prevHPos.xy + 1) / 2;
-    float2 vPosCur = (curHPos.xy + 1) / 2;
-    return vPosCur - vPosPrev;
-}
-
-float2 UnitVectorToOctahedron( float3 N )
-{
-    N.xy /= dot( 1, abs(N) );
-    if( N.z <= 0 ) {
-        N.xy = ( 1 - abs(N.yx) ) * ( N.xy >= 0 ? float2(1, 1) : float2(-1, -1) );
-    }
-    return N.xy;
-}
-
-float3 OctahedronToUnitVector( float2 Oct )
-{
-    float3 N = float3( Oct, 1 - dot( 1, abs(Oct) ) );
-    if( N.z < 0 ) {
-        N.xy = ( 1 - abs(N.yx) ) * ( N.xy >= 0 ? float2(1, 1) : float2(-1, -1) );
-    }
-    return normalize(N);
-}
-
-float2 UnitVectorToHemiOctahedron( float3 N )
-{
-	N.xy /= dot( 1, abs(N) );
-	return float2( N.x + N.y, N.x - N.y );
-}
-
-float3 HemiOctahedronToUnitVector( float2 Oct )
-{
-	Oct = float2( Oct.x + Oct.y, Oct.x - Oct.y ) * 0.5;
-	float3 N = float3( Oct, 1 - dot( 1, abs(Oct) ) );
-	return normalize(N);
-}
-
-float3 Pack1212To888( float2 x )
-{
-	// Pack 12:12 to 8:8:8
-#if 0
-	uint2 x1212 = (uint2)( x * 4095.0 );
-	uint2 High = x1212 >> 8;
-	uint2 Low = x1212 & 255;
-	uint3 x888 = uint3( Low, High.x | (High.y << 4) );
-	return x888 / 255.0;
-#else
-	float2 x1212 = floor( x * 4095 );
-	float2 High = floor( x1212 / 256 );	// x1212 >> 8
-	float2 Low = x1212 - High * 256;	// x1212 & 255
-	float3 x888 = float3( Low, High.x + High.y * 16 );
-	return saturate( x888 / 255 );
-#endif
-}
-
-float2 Pack888To1212( float3 x )
-{
-	// Pack 8:8:8 to 12:12
-#if 0
-	uint3 x888 = (uint3)( x * 255.0 );
-	uint High = x888.z >> 4;
-	uint Low = x888.z & 15;
-	uint2 x1212 = x888.xy | uint2( Low << 8, High << 8 );
-	return x1212 / 4095.0;
-#else
-	float3 x888 = floor( x * 255 );
-	float High = floor( x888.z / 16 );	// x888.z >> 4
-	float Low = x888.z - High * 16;		// x888.z & 15
-	float2 x1212 = x888.xy + float2( Low, High ) * 256;
-	return saturate( x1212 / 4095 );
-#endif
-}
-
-struct ThinGBufferData
-{
-    float Roughness;
-    float Reflactance;
-	float3 WorldNormal;
-	float3 AlbedoColor;
-};
-
-float3 EncodeNormalDir( float3 N )
-{
-	return Pack1212To888( UnitVectorToOctahedron( N ) * 0.5 + 0.5 );
-}
-
-float3 DecodeNormalDir( float3 N )
-{
-	return OctahedronToUnitVector( Pack888To1212( N ) * 2 - 1 );
-}
-
-void EncodeIntGBuffer(ThinGBufferData GBufferData, out int EncodeData_GBufferA, out int EncodeData_GBufferB)
-{
-    int2 EncodeNormal = int2(saturate( UnitVectorToOctahedron(GBufferData.WorldNormal) * 0.5 + 0.5) * 0xFFF);
-    int EncodeRoughness = int(saturate(GBufferData.Roughness) * 0xFF);
-    int3 EncodeAlbedo = int3(saturate(GBufferData.AlbedoColor) * 0xFF);
-    int EncodeReflactance = int(saturate(GBufferData.Reflactance) * 0xFF);
-                    
-    EncodeData_GBufferA = (EncodeNormal.x << 20) + (EncodeNormal.y << 8) + EncodeRoughness;
-    EncodeData_GBufferB = (EncodeAlbedo.x << 24) + (EncodeAlbedo.y << 16) + (EncodeAlbedo.z << 8) + EncodeReflactance;
-}
-
-void DecodeIntGBuffer(int EncodeData_GBufferA, int EncodeData_GBufferB, out ThinGBufferData GBufferData)
-{
-    GBufferData.WorldNormal = OctahedronToUnitVector( (int2(EncodeData_GBufferA >> 20, EncodeData_GBufferA >> 8) & 0xFFF) / float(0xFFF)  * 2 - 1);
-    GBufferData.Roughness = ((EncodeData_GBufferA >> 32) & 0xFF) / 255.0f;
-    GBufferData.AlbedoColor = (int3(EncodeData_GBufferB >> 24, EncodeData_GBufferB >> 16, EncodeData_GBufferB >> 8) & 0xFF) / 255.0f;
-    GBufferData.Reflactance = (EncodeData_GBufferB >> 24 & 0xFF) / 255.0f;
-}
-
-void EncodeFloatGBuffer(ThinGBufferData GBufferData, out float4 EncodeData_GBufferA, out float4 EncodeData_GBufferB)
-{
-    float3 EncodeNormal = EncodeNormalDir(GBufferData.WorldNormal);
-    float EncodeRoughness = GBufferData.Roughness;
-    float3 EncodeAlbedo = GBufferData.AlbedoColor;
-    float EncodeReflactance = GBufferData.Reflactance;
-                    
-    EncodeData_GBufferA = float4(EncodeNormal, EncodeRoughness);
-    EncodeData_GBufferB = float4(EncodeAlbedo, EncodeReflactance);
-}
-
-void DecodeFloatGBuffer(float4 EncodeData_GBufferA, float4 EncodeData_GBufferB, out ThinGBufferData GBufferData)
-{
-    GBufferData.WorldNormal = DecodeNormalDir(EncodeData_GBufferA.xyz);
-    GBufferData.Roughness = EncodeData_GBufferA.a;
-    GBufferData.AlbedoColor = EncodeData_GBufferB.rgb;
-    GBufferData.Reflactance = EncodeData_GBufferB.a;
+    float2 LastUV = LastNDC.xy * 0.5 + 0.5;
+    float2 CurUV = CurNDC.xy * 0.5 + 0.5;
+    return CurUV - LastUV;
 }
 
 #endif

@@ -110,9 +110,9 @@ void Raytracing_ScreenTrace (uint3 id : SV_DispatchThreadID)
         UAV_ScreenIrradiance[id.xy] = 0;
         return;
     }
-	float3 ScreenPos = GetScreenSpacePos(UV, SceneDepth);
-	float3 WorldPos = GetWorldSpacePos(ScreenPos, Matrix_InvViewProj);
-	float3 ViewPos = GetViewSpacePos(ScreenPos, Matrix_InvProj);
+	float3 NDCPos = GetNDCPos(UV, SceneDepth);
+	float3 WorldPos = GetWorldSpacePos(NDCPos, Matrix_InvViewProj);
+	float3 ViewPos = GetViewSpacePos(NDCPos, Matrix_InvProj);
 	float3 ViewDir = GetViewDir(WorldPos, ViewPos);
 	float3 WorldNormal = SRV_GBufferNormal.SampleLevel(Global_point_clamp_sampler, UV, 0).xyz * 2 - 1;
 	float3x3 TangentToWorld = GetTangentBasis(WorldNormal);
@@ -123,20 +123,22 @@ void Raytracing_ScreenTrace (uint3 id : SV_DispatchThreadID)
 	float Out_Occlusion = 0;
     float4 Out_ColorMask = 0;
 
-	float3 BentNormal = 0;
+	//float3 BentNormal = 0;
 
 	[loop]
 	for (uint i = 0; i < (uint)SSGi_NumRays; i++) 
 	{
+		//float2 Hash = Halton(i, Random);
 		float2 Hash = Hammersley16(i, (uint)SSGi_NumRays, Random);
 		float3 LightDir_TS = CosineSampleHemisphere(Hash).xyz;
 		float3 LightDir_WS = mul(LightDir_TS, TangentToWorld);
 		float3 LightDir_VS = mul((float3x3)(Matrix_WorldToView), LightDir_WS);
+		//BentNormal += LightDir_WS;
 
 		float Level;
 		float3 HitUVz;
 
-		float3 RayStartScreen = ScreenPos;
+		float3 RayStartScreen = NDCPos;
 		float4 RayEndScreen = mul( Matrix_Proj, float4(LightDir_VS, 0) ) + float4(RayStartScreen, 1); 
 		RayEndScreen.xyz = (RayEndScreen.xyz / max(RayEndScreen.w, 1e-4));
 		float3 RayDepthScreen = 0.5 * (RayStartScreen + mul( Matrix_Proj, float4(0, 0, 1, 0) ).xyz);
@@ -158,23 +160,23 @@ void Raytracing_ScreenTrace (uint3 id : SV_DispatchThreadID)
 			float3 SampleColor = SRV_PyramidColor.SampleLevel(Global_point_clamp_sampler, HitUVz.xy, 0).rgb;
 			SampleColor.rgb *= rcp( 1 + Luminance(SampleColor.rgb) );
 			Out_ColorMask += float4(SampleColor.rgb, GetScreenFadeBord(HitUVz.xy, 0.1));
-		} else {
-			BentNormal += LightDir_WS;
+
+			//BentNormal = 0;
 		}
 	}
 
-	/*Out_Occlusion /= SSGi_NumRays;
+	Out_Occlusion /= SSGi_NumRays;
 	Out_ColorMask /= SSGi_NumRays;
 	Out_ColorMask.rgb *= rcp( 1 - Luminance(Out_ColorMask.rgb) ) * (1 - Out_Occlusion) * SSGi_Intensity;
-	UAV_ScreenIrradiance[id.xy] = Out_ColorMask * Out_ColorMask.a;*/
+	UAV_ScreenIrradiance[id.xy] = Out_ColorMask * Out_ColorMask.a;
 
 
 
-	BentNormal = normalize(BentNormal) * 2 - 1;
-	float3 ReflectVector = -reflect(WorldNormal, normalize(WorldPos - _WorldSpaceCameraPos));
-	float ReflecOcclusion = ReflectionOcclusion(BentNormal, ReflectVector, 0.25, 0.5);
+	//BentNormal = normalize(BentNormal);
+	//float3 ReflectVector = -reflect(WorldNormal, normalize(WorldPos - _WorldSpaceCameraPos));
+	//float ReflecOcclusion = ReflectionOcclusion(BentNormal, ReflectVector, 0.25, 0.5);
 
 	//UAV_ScreenIrradiance[id.xy] = ReflecOcclusion;
 	//UAV_ScreenIrradiance[id.xy] = float4(BentNormal, 1);
-	UAV_ScreenIrradiance[id.xy] = dot(BentNormal, _WorldSpaceLightPos0.xyz);
+	//UAV_ScreenIrradiance[id.xy] = dot(BentNormal, _WorldSpaceLightPos0.xyz);
 }

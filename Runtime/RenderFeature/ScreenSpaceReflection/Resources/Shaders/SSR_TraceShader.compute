@@ -106,9 +106,9 @@ void Raytracing_ScreenTrace (uint3 id : SV_DispatchThreadID)
         UAV_ReflectionColorMask[id.xy] = 0;
         return;
     }
-	float3 ScreenPos = GetScreenSpacePos(UV, SceneDepth);
-	float3 WorldPos = GetWorldSpacePos(ScreenPos, Matrix_InvViewProj);
-	float3 ViewPos = GetViewSpacePos(ScreenPos, Matrix_InvProj);
+	float3 NDCPos = GetNDCPos(UV, SceneDepth);
+	float3 WorldPos = GetWorldSpacePos(NDCPos, Matrix_InvViewProj);
+	float3 ViewPos = GetViewSpacePos(NDCPos, Matrix_InvProj);
 	float3 ViewDir = GetViewDir(WorldPos, ViewPos);
 	float3 WorldNormal = SRV_GBufferNormal.SampleLevel(Global_point_clamp_sampler, UV, 0).xyz * 2 - 1;
 	float3 ViewNormal = mul( (float3x3)Matrix_WorldToView, WorldNormal );
@@ -132,7 +132,7 @@ void Raytracing_ScreenTrace (uint3 id : SV_DispatchThreadID)
 		float Level;
 		float3 HitUVz;
 
-		float3 RayStartScreen = ScreenPos;
+		float3 RayStartScreen = NDCPos;
 		float4 RayEndScreen = mul( Matrix_Proj, float4(LightDir_VS, 0) ) + float4(RayStartScreen, 1); 
 		RayEndScreen.xyz = (RayEndScreen.xyz / max(RayEndScreen.w, 1e-4));
 		float3 RayDepthScreen = 0.5 * (RayStartScreen + mul( Matrix_Proj, float4(0, 0, 1, 0) ).xyz);

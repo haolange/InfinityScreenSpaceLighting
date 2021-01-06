@@ -182,9 +182,9 @@ void SpatialFilter (uint3 id : SV_DispatchThreadID)
 	float3 WorldNormal = SRV_GBufferNormal.SampleLevel(Global_point_clamp_sampler, UV, 0).xyz * 2 - 1;
     float Roughness = clamp( 1 - SRV_GBufferRoughness.SampleLevel(Global_point_clamp_sampler, UV, 0).a, 0.02, 1 );
     float3 ViewNormal = mul( (float3x3)Matrix_WorldToView, WorldNormal );
-    float3 ScreenSpacePos = GetScreenSpacePos(UV, SceneDepth);
-    float3 WorldSpacePos = GetWorldSpacePos(ScreenSpacePos, Matrix_InvViewProj);
-    float3 ViewSpacePos = GetViewSpacePos(ScreenSpacePos, Matrix_InvProj);
+    float3 NDCPos = GetNDCPos(UV, SceneDepth);
+    float3 WorldSpacePos = GetWorldSpacePos(NDCPos, Matrix_InvViewProj);
+    float3 ViewSpacePos = GetViewSpacePos(NDCPos, Matrix_InvProj);
 
 	float NumWeight;
 	float4 ReflecttionColor;
@@ -206,7 +206,7 @@ void SpatialFilter (uint3 id : SV_DispatchThreadID)
 
 		float4 HitUWVPDF = SRV_UWVPDF.SampleLevel(Global_bilinear_repeat_sampler, Offset_UV, 0);
 		float4 HitColorMask = SRV_ColorMask.SampleLevel(Global_bilinear_repeat_sampler, Offset_UV, 0);
-		float3 Hit_ViewSpacePos = GetViewSpacePos( GetScreenSpacePos(HitUWVPDF.xy, HitUWVPDF.z), Matrix_InvProj );
+		float3 Hit_ViewSpacePos = GetViewSpacePos( GetNDCPos(HitUWVPDF.xy, HitUWVPDF.z), Matrix_InvProj );
 
 		///Variance Accmulation
         MomentA += HitColorMask.rgb;

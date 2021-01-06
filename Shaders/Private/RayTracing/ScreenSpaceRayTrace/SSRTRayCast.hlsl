@@ -252,7 +252,7 @@ bool RayCast_Specular(uint NumSteps, float Roughness, float CompareFactory, floa
 	float LastDiff = 0;
 	OutHitUVz = float3(0, 0, 0);
 
-	[loop]
+	[unroll(12)]
 	for( uint i = 0; i < NumSteps; i += 4 )
 	{
 		// Vectorized to group fetches

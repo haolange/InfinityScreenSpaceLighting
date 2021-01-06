@@ -134,30 +134,45 @@ float2 IBL_Charlie_SpecularIntegrated_Approx(float Roughness, float NoV) {
     return float2(r, r * c0.z);
 }
 
-
 float3 IBL_Hair_FullIntegrated(float3 V, float3 N, float3 SpecularColor, float Roughness, float Scatter)
 {
 	float3 Lighting = 0;
 	uint NumSamples = 32;
 	
 	[loop]
-	for( uint i = 0; i < NumSamples; i++ ) {
-        float2 E = Hammersley(i, NumSamples, HaltonSequence(i));
+	for( uint i = 0; i < NumSamples; i++ ) 
+    {
+        float2 E = Hammersley(i, NumSamples, Halton(i));
         float3 L = UniformSampleSphere(E).rgb;
-		{
-			float PDF = 1 / (4 * Pi);
-			float InvWeight = PDF * NumSamples;
-			float Weight = rcp(InvWeight);
 
-			float3 Shading = 0;
-            Shading = Hair_Lit(L, V, N, SpecularColor, 0.5, Roughness, 0, Scatter, 0, 0);
+        float PDF = 1 / (4 * Pi);
+        float InvWeight = PDF * NumSamples;
+        float Weight = rcp(InvWeight);
 
-            Lighting += Shading * Weight;
-		}
+        Lighting += HairLit(L, V, N, SpecularColor, 0.5, Roughness, 0, Scatter, 0, 0) * Weight;
 	}
 	return Lighting;
 }
 
+float3 IBL_Hair_FullIntegrated(float3 V, float3 N, float3 SpecularColor, float Roughness, float Scatter, uint2 Random)
+{
+	float3 Lighting = 0;
+	uint NumSamples = 32;
+
+	[loop]
+	for( uint i = 0; i < NumSamples; i++ ) 
+    {
+        float2 E = Hammersley16(i, NumSamples, Random);
+        float3 L = UniformSampleSphere(E).rgb;
+
+        float PDF = 1 / (4 * Pi);
+        float InvWeight = PDF * NumSamples;
+        float Weight = rcp(InvWeight);
+
+        Lighting += HairLit(L, V, N, SpecularColor, 0.5, Roughness, 0, Scatter, 0, 0) * Weight;
+	}
+	return Lighting;
+}
 
 //////////Enviornment BRDF
 float4 PreintegratedDGF_LUT(sampler2D PreintegratedLUT, inout float3 EnergyCompensation, float3 SpecularColor, float Roughness, float NoV)

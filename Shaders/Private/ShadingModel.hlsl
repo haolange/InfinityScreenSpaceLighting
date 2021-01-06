@@ -3,7 +3,7 @@
 
 #include "BSDF.hlsl"
 
-half3 Defult_Lit(BSDFContext LightData, half3 Attenuation, half3 MultiScatterEnergy, half3 AlbedoColor, half3 SpecularColor, half Roughness)
+half3 DefultLit(BSDFContext LightData, half3 Attenuation, half3 MultiScatterEnergy, half3 AlbedoColor, half3 SpecularColor, half Roughness)
 {
     half3 Diffuse = Diffuse_RenormalizeBurley(LightData.LoH, LightData.NoL, LightData.NoV, AlbedoColor, Roughness);
 
@@ -17,7 +17,7 @@ half3 Defult_Lit(BSDFContext LightData, half3 Attenuation, half3 MultiScatterEne
     return max( 0, (Diffuse + Specular) * Attenuation );
 }
 
-half3 Skin_Lit(BSDFContext LightData, half3 Attenuation, half3 MultiScatterEnergy, half3 AlbedoColor, half3 SpecularColor, half Roughness)
+half3 SkinLit(BSDFContext LightData, half3 Attenuation, half3 MultiScatterEnergy, half3 AlbedoColor, half3 SpecularColor, half Roughness)
 {
     half3 Diffuse = Diffuse_RenormalizeBurley(LightData.LoH, LightData.NoL, LightData.NoV, AlbedoColor, Roughness);
 
@@ -31,7 +31,7 @@ half3 Skin_Lit(BSDFContext LightData, half3 Attenuation, half3 MultiScatterEnerg
 	return max( 0, (Diffuse + Specular) * Attenuation );
 }
 
-half3 ClearCoat_Lit(BSDFContext LightData, half3 Attenuation, half3 MultiScatterEnergy, half3 ClearCoat_MultiScatterEnergy, half3 AlbedoColor, half3 SpecularColor, half ClearCoat, half ClearCoat_Roughness, half Roughness)
+half3 ClearCoatLit(BSDFContext LightData, half3 Attenuation, half3 MultiScatterEnergy, half3 ClearCoat_MultiScatterEnergy, half3 AlbedoColor, half3 SpecularColor, half ClearCoat, half ClearCoat_Roughness, half Roughness)
 {
 	half3 Diffuse = Diffuse_RenormalizeBurley(LightData.LoH, LightData.NoL, LightData.NoV, AlbedoColor, Roughness);
 
@@ -54,7 +54,7 @@ half3 ClearCoat_Lit(BSDFContext LightData, half3 Attenuation, half3 MultiScatter
 	return max( 0, (Diffuse + BaseSpecular + ClearCoat_Specular) * Attenuation * LayerAttenuation );
 }
 
-half3 Cloth_Cotton(BSDFContext LightData, half3 Attenuation, half3 AlbedoColor, half3 SpecularColor, half Roughness)
+half3 CottonLit(BSDFContext LightData, half3 Attenuation, half3 AlbedoColor, half3 SpecularColor, half Roughness)
 {
 	half3 Diffuse = Diffuse_Fabric(AlbedoColor, Roughness);
 
@@ -72,7 +72,7 @@ half3 Cloth_Cotton(BSDFContext LightData, half3 Attenuation, half3 AlbedoColor, 
 	return max( 0, (Diffuse + Specular) * Attenuation );
 }
 
-half3 Cloth_Silk(BSDFContext LightData, AnisoBSDFContext AnisoLightContext, half3 Attenuation, half3 MultiScatterEnergy, half3 AlbedoColor, half3 SpecularColor, half Roughness, half RoughnessT, half RoughnessB)
+half3 SilkLit(BSDFContext LightData, AnisoBSDFContext AnisoLightContext, half3 Attenuation, half3 MultiScatterEnergy, half3 AlbedoColor, half3 SpecularColor, half Roughness, half RoughnessT, half RoughnessB)
 {
     
     half3 Diffuse = Diffuse_Fabric(AlbedoColor, Roughness);
@@ -87,7 +87,7 @@ half3 Cloth_Silk(BSDFContext LightData, AnisoBSDFContext AnisoLightContext, half
 	return max(0, (Diffuse + Specular) * Attenuation);
 }
 
-float3 Hair_Lit(float3 L, float3 V, half3 N, float3 SpecularColor, float Specular, float Roughness,float Backlit, float Scatter, float Area, float Shadow) {
+float3 HairLit(float3 L, float3 V, half3 N, float3 SpecularColor, float Specular, float Roughness,float Backlit, float Scatter, float Area, float Shadow) {
 	Scatter = Scatter / 10;
 	const float VoL       = dot(V,L);
 	const float SinThetaL = dot(N,L);
